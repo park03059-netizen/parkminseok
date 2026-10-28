@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>올릴 곳 맞춤 사진 편집</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo"></span>맞춤사진</div>
+    <div class="topbar-status" id="topStatus"></div>
+  </header>
+
+  <main>
+    <!-- 1. 올릴 곳 -->
+    <section class="screen" data-screen="home">
+      <div class="screen-head">
+        <h1>어디에 올릴까요?</h1>
+        <p>올릴 곳만 고르면 크기와 용량은 알아서 맞춰 드려요.</p>
+      </div>
+      <div class="layout-split">
+        <div class="col-left">
+          <div class="panel">
+            <h2><span class="step">1</span>올릴 곳 고르기</h2>
+            <div class="platform-grid" id="platformGrid"></div>
+          </div>
+          <div class="panel">
+            <h2><span class="step">2</span>사진 올리기</h2>
+            <label class="dropzone" id="homeDrop">
+              <input type="file" accept="image/*" id="homeFile" hidden>
+              <span class="dz-icon"></span>
+              <span class="dz-main" id="homeDropText">사진을 끌어다 놓거나 눌러서 고르세요</span>
+              <span class="dz-sub">JPG · PNG · WEBP</span>
+            </label>
+          </div>
+        </div>
+        <div class="panel stage-panel">
+          <div class="stage-title">
+            <h2><span class="step">3</span>실제로 이렇게 보여요</h2>
+            <div class="spec" id="homeSpec"></div>
+          </div>
+          <div class="stage" id="homePreview"></div>
+          <div class="actions">
+            <button class="btn" id="homeToEdit">위치 직접 맞추기</button>
+            <button class="btn primary" id="homeDownload">바로 내려받기</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. 편집 -->
+    <section class="screen" data-screen="edit">
+      <div class="screen-head">
+        <h1>틀 안에서 맞추기</h1>
+        <p>사진을 끌어서 위치를 옮기고, 마우스 휠이나 막대로 크기를 조절하세요.</p>
+      </div>
+      <div class="layout-split edit-split">
+        <div class="panel stage-panel">
+          <div class="compare">
+            <div class="compare-col" id="origCol">
+              <div class="compare-label">원본 <small id="origInfo"></small></div>
+              <div class="orig-box" id="origBox" data-empty="사진을 올리면 원본이 여기 보여요">
+                <canvas id="origCanvas"></canvas>
+              </div>
+              <p class="compare-note">파란 테두리 안이 틀에 들어가는 부분이에요</p>
+            </div>
+            <div class="compare-arrow" aria-hidden="true">→</div>
+            <div class="compare-col">
+              <div class="compare-label">바뀐 사진 <small id="outInfo"></small></div>
+              <div class="stage" id="editStage"></div>
+            </div>
+          </div>
+          <p class="stage-hint">끌어서 옮기기 · 휠로 확대/축소 · 가운데 가까이 오면 딱 붙어요</p>
+        </div>
+        <div class="col-right">
+          <div class="panel">
+            <h2>올릴 곳</h2>
+            <div class="chips" id="editChips"></div>
+          </div>
+          <div class="panel">
+            <h2>사진</h2>
+            <label class="btn block" id="editFileBtn">
+              <input type="file" accept="image/*" id="editFile" hidden>
+              <span id="editFileText">사진 올리기</span>
+            </label>
+          </div>
+          <div class="panel">
+            <h2>해상도 <span class="muted" id="resRatio"></span></h2>
+            <div class="res-row">
+              <label>가로 (px)<input type="number" id="resW" min="16" max="6000" step="1"></label>
+              <span class="res-x">×</span>
+              <label>세로 (px)<input type="number" id="resH" min="16" max="6000" step="1"></label>
+            </div>
+            <div class="res-opts">
+              <label class="check"><input type="checkbox" id="resLock" checked> 비율 유지</label>
+              <button class="btn small" id="resReset">원래 크기</button>
+            </div>
+          </div>
+          <div class="panel">
+            <h2>크기 <span class="muted" id="zoomVal">100%</span></h2>
+            <div class="zoom-row">
+              <button class="icon-btn" id="zoomOut" aria-label="축소">−</button>
+              <input type="range" id="zoomRange" min="1" max="5" step="0.01" value="1">
+              <button class="icon-btn" id="zoomIn" aria-label="확대">+</button>
+            </div>
+            <div class="btn-row">
+              <button class="btn small" id="centerBtn">가운데 맞추기</button>
+              <button class="btn small" id="resetBtn">처음으로</button>
+            </div>
+          </div>
+          <div class="panel">
+            <h2>내보내기</h2>
+            <div class="spec" id="editSpec"></div>
+            <div class="btn-col">
+              <button class="btn primary block" id="editDownload">내려받기</button>
+              <button class="btn block" id="editSave">결과에 담기</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. GIF 만들기 -->
+    <section class="screen" data-screen="gif">
+      <div class="screen-head">
+        <h1>GIF 만들기</h1>
+        <p>여러 장을 올리고 순서를 정하면 하나의 움직이는 사진으로 이어 드려요.</p>
+      </div>
+      <div class="layout-split">
+        <div class="col-left">
+          <div class="panel">
+            <h2><span class="step">1</span>사진 여러 장 올리기 <span class="muted" id="gifCount"></span></h2>
+            <label class="dropzone compact" id="gifDrop">
+              <input type="file" accept="image/*" id="gifFile" multiple hidden>
+              <span class="dz-icon"></span>
+              <span class="dz-main">여러 장을 한 번에 끌어다 놓거나 눌러서 고르세요</span>
+            </label>
+            <p class="hint">칸을 끌어서 순서를 바꿀 수 있어요.</p>
+            <div class="frame-strip" id="frameStrip"></div>
+          </div>
+          <div class="panel">
+            <h2><span class="step">2</span>설정</h2>
+            <div class="form-grid">
+              <label>모양 (올릴 곳)
+                <select id="gifPlatform"></select>
+              </label>
+              <label>맞춤 방식
+                <div class="seg" id="gifFit">
+                  <button data-fit="cover">꽉 채우기</button>
+                  <button data-fit="contain">전체 보이기</button>
+                </div>
+              </label>
+              <label>한 장당 시간 <span class="muted" id="gifDelayVal">0.5초</span>
+                <input type="range" id="gifDelay" min="0.1" max="2" step="0.1" value="0.5">
+              </label>
+              <label>가로 크기
+                <select id="gifWidth">
+                  <option value="320">320px (가볍게)</option>
+                  <option value="480" selected>480px (보통)</option>
+                  <option value="640">640px (선명하게)</option>
+                </select>
+              </label>
+              <label>최대 용량
+                <select id="gifMax">
+                  <option value="1">1MB</option>
+                  <option value="2">2MB</option>
+                  <option value="5" selected>5MB</option>
+                  <option value="8">8MB</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="panel stage-panel">
+          <div class="stage-title">
+            <h2><span class="step">3</span>미리 보기</h2>
+            <div class="spec" id="gifSpec"></div>
+          </div>
+          <div class="gif-stage-row">
+            <div class="stage" id="gifStage"></div>
+            <div class="gif-tools">
+              <button class="tool-btn" id="gifTextBtn"><span class="tool-ic">가</span>문구 넣기</button>
+              <button class="tool-btn" id="gifEmojiBtn"><span class="tool-ic">😊</span>이모티콘 넣기</button>
+              <p class="tool-hint">GIF 위의 문구와 이모티콘은 끌어서 옮기고, 휠로 크기를 바꿔요.</p>
+            </div>
+          </div>
+          <div class="text-bar" id="gifTextBar" hidden>
+            <input id="gifTextInput" maxlength="40" placeholder="GIF 위에 넣을 문구를 입력하세요" autocomplete="off">
+            <div class="swatches" id="gifTextColors">
+              <button data-color="#ffffff" style="--c:#ffffff" aria-label="흰색"></button>
+              <button data-color="#fde047" style="--c:#fde047" aria-label="노랑"></button>
+              <button data-color="#7dd3fc" style="--c:#7dd3fc" aria-label="하늘"></button>
+              <button data-color="#f9a8d4" style="--c:#f9a8d4" aria-label="분홍"></button>
+              <button data-color="#0f172a" style="--c:#0f172a" aria-label="검정"></button>
+            </div>
+            <button class="btn small" id="gifTextDel">문구 지우기</button>
+          </div>
+          <div class="progress" id="gifProgress" hidden><i></i><span></span></div>
+          <div class="gif-done" id="gifDone" hidden></div>
+          <div class="actions">
+            <button class="btn primary" id="gifMake">GIF 만들기</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. 결과 -->
+    <section class="screen" data-screen="result">
+      <div class="screen-head row">
+        <div>
+          <h1>결과 모아 보기</h1>
+          <p>맞춰진 사진을 실제 올릴 곳 모양 그대로 보여 드려요.</p>
+        </div>
+      </div>
+      <div class="result-grid" id="resultGrid"></div>
+      <div class="result-foot" id="resultFoot" hidden>
+        <button class="zip-btn" id="downloadAll" style="--p: 0">
+          <i class="zip-fill" aria-hidden="true"></i>
+          <span class="zip-label" id="zipLabel">전체 한번에 받기</span>
+        </button>
+        <small id="zipNote">모든 파일의 용량을 줄여 압축 파일(.zip) 하나로 받아요.</small>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <a href="#home" data-nav="home">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
+      <span>올릴 곳</span>
+    </a>
+    <a href="#edit" data-nav="edit">
+      <svg viewBox="0 0 24 24"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>
+      <span>편집</span>
+    </a>
+    <a href="#gif" data-nav="gif">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></svg>
+      <span>GIF 만들기</span>
+    </a>
+    <a href="#result" data-nav="result">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      <span>결과</span>
+      <em class="badge" id="resultBadge" hidden></em>
+    </a>
+  </nav>
+
+  <dialog class="modal" id="customDialog" aria-labelledby="customTitle">
+    <form id="customForm" novalidate>
+      <div class="modal-head">
+        <h3 id="customTitle">내 올릴 곳 만들기</h3>
+        <button type="button" class="modal-x" id="customCancelX" aria-label="닫기">×</button>
+      </div>
+      <div class="modal-body">
+        <label class="field">이름
+          <input id="cfName" maxlength="14" placeholder="예: 학교 홈페이지 배너" autocomplete="off">
+        </label>
+        <div class="field">크기 (가로 × 세로, px)
+          <div class="field-row">
+            <input type="number" id="cfW" min="16" max="6000" value="1080" aria-label="가로">
+            <span>×</span>
+            <input type="number" id="cfH" min="16" max="6000" value="1080" aria-label="세로">
+          </div>
+        </div>
+        <div class="field">용량 (최대)
+          <div class="field-row">
+            <input type="number" id="cfSize" min="1" step="any" value="1" aria-label="용량">
+            <select id="cfUnit" aria-label="단위">
+              <option value="KB">KB</option>
+              <option value="MB" selected>MB</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">모양
+          <div class="seg" id="cfShape">
+            <button type="button" data-shape="rect">네모</button>
+            <button type="button" data-shape="rounded">둥근 네모</button>
+            <button type="button" data-shape="circle">동그라미</button>
+          </div>
+        </div>
+        <div class="cf-preview">
+          <span class="pcard-shape-box big"><span id="cfPreviewShape" class="pcard-shape"></span></span>
+          <small id="cfPreviewText"></small>
+        </div>
+        <p class="form-error" id="cfError" role="alert"></p>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="customCancel">취소</button>
+        <button type="submit" class="btn primary">저장</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="modal floating" id="emojiDialog" aria-labelledby="emojiTitle">
+    <div class="modal-head">
+      <h3 id="emojiTitle">이모티콘 고르기</h3>
+      <button type="button" class="modal-x" id="emojiClose" aria-label="닫기">×</button>
+    </div>
+    <p class="emoji-hint">GIF 위로 끌어다 놓거나, 눌러서 가운데에 넣으세요.</p>
+    <div class="emoji-sec">움직이는 GIF</div>
+    <div class="sticker-grid" id="stickerGrid"></div>
+    <div class="emoji-sec">이모티콘</div>
+    <div class="emoji-grid" id="emojiGrid"></div>
+  </dialog>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="gif-encoder.js"></script>
+  <script src="stickers.js"></script>
+  <script src="zip.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
