@@ -169,7 +169,7 @@
   }
 
   /**
-   * @param {{width:number,height:number,count:number,getFrame:(i:number)=>ImageData,delays:number[],onProgress?:(done:number,total:number)=>void}} opt
+   * @param {{width:number,height:number,count:number,getFrame:(i:number)=>ImageData|Promise<ImageData>,delays:number[],onProgress?:(done:number,total:number)=>void}} opt
    * delays: 장면마다 보여 줄 초
    * @returns {Promise<Uint8Array>}
    */
@@ -185,7 +185,7 @@
 
     let prev = null;
     for (let f = 0; f < count; f++) {
-      const data = getFrame(f).data;
+      const data = (await getFrame(f)).data;
       const cur = new Uint32Array(data.buffer, data.byteOffset, width * height);
       const r = prev ? diffRect(prev, cur, width, height) : { x: 0, y: 0, w: width, h: height };
       prev = cur;

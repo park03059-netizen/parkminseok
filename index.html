@@ -123,6 +123,11 @@
 
     <!-- 3. GIF 만들기 -->
     <section class="screen" data-screen="gif">
+      <div class="seg gif-tabs" id="gifTabs" role="tablist">
+        <button role="tab" data-tab="photo">사진으로</button>
+        <button role="tab" data-tab="video">동영상으로</button>
+      </div>
+      <div id="gifPhotoPane">
       <div class="screen-head">
         <h1>GIF 만들기</h1>
         <p>여러 장을 올리고 순서를 정하면 하나의 움직이는 사진으로 이어 드려요.</p>
@@ -200,6 +205,99 @@
           <div class="gif-done" id="gifDone" hidden></div>
           <div class="actions">
             <button class="btn primary" id="gifMake">GIF 만들기</button>
+          </div>
+        </div>
+      </div>
+      </div>
+
+      <div id="gifVideoPane" hidden>
+        <div class="vg-hero">
+          <h1 class="vg-title">Video를 GIF로 변환</h1>
+          <p class="vg-sub">동영상을 애니로</p>
+        </div>
+        <div class="panel vg-upload">
+          <div class="dropzone vg-drop" id="vgDrop">
+            <input type="file" id="vgFile" accept="video/mp4,video/webm,video/ogg,video/quicktime,.mp4,.m4v,.webm,.ogg,.ogv,.mov" hidden>
+            <span class="dz-icon vg-film"></span>
+            <span class="dz-main" id="vgDropText">동영상을 여기에 끌어다 놓으세요</span>
+            <span class="dz-sub">또는</span>
+            <button type="button" class="btn primary" id="vgPick">파일 고르기</button>
+          </div>
+          <p class="vg-error" id="vgError" role="alert" hidden></p>
+          <div class="vg-formats" id="vgFormats">
+            <span class="vg-formats-label">변환할 수 있는 형식</span>
+            <div class="vg-fmt-list" id="vgFmtList"></div>
+          </div>
+        </div>
+
+        <div class="panel ve" id="vgEditor" hidden>
+          <div class="ve-top">
+            <button type="button" class="ve-pill" id="veCancel">취소</button>
+            <button type="button" class="ve-pill primary" id="veDone">완료</button>
+          </div>
+          <div class="ve-sub">
+            <button type="button" class="ve-icon" id="veSound"></button>
+            <b class="ve-title" id="veTitle">동영상</b>
+            <button type="button" class="ve-icon" id="veReset" title="편집을 모두 처음 상태로" aria-label="편집을 모두 처음 상태로"></button>
+          </div>
+          <div class="ve-view" id="veView"><canvas id="veCanvas"></canvas></div>
+          <p class="ve-note" id="veNote"></p>
+
+          <div class="ve-panel" data-tool="trim">
+            <div class="ve-times" id="veTimes"><b id="veRange">0:00 ~ 0:00</b><small id="veLen"></small></div>
+            <div class="ve-trim">
+              <button type="button" class="ve-play" id="vePlay" aria-label="재생"></button>
+              <div class="ve-strip" id="veStrip">
+                <div class="ve-thumbs" id="veThumbs"></div>
+                <div class="ve-shade" id="veShadeL"></div>
+                <div class="ve-shade" id="veShadeR"></div>
+                <div class="ve-sel" id="veSel">
+                  <span class="ve-handle" data-h="start" aria-label="시작 손잡이"></span>
+                  <span class="ve-handle" data-h="end" aria-label="끝 손잡이"></span>
+                </div>
+                <div class="ve-head" id="veHead"></div>
+              </div>
+            </div>
+          </div>
+          <div class="ve-panel" data-tool="adjust" hidden>
+            <div class="ve-adjust" id="veAdjust"></div>
+          </div>
+          <div class="ve-panel" data-tool="filter" hidden>
+            <div class="ve-filters" id="veFilters"></div>
+          </div>
+          <div class="ve-panel" data-tool="crop" hidden>
+            <div class="ve-ratios" id="veRatios"></div>
+            <p class="ve-hint">틀 안을 끌어서 옮기고, 모서리를 끌어서 크기를 바꿔요.</p>
+          </div>
+
+          <nav class="ve-tabs" id="veTabs"></nav>
+        </div>
+
+        <div class="layout-split vg-work" id="vgWork" hidden>
+          <div class="col-left">
+            <div class="panel">
+              <h2>동영상 정보</h2>
+              <dl class="vg-info" id="vgInfo"></dl>
+              <div class="vg-target" id="vgTarget"></div>
+            </div>
+            <div class="panel">
+              <h2>장면 미리보기</h2>
+              <p class="hint">장면에 마우스를 올리면 오른쪽 위에 받기(↓)와 빼기(×) 버튼이 나와요.</p>
+              <div class="vg-count" id="vgSceneCount"></div>
+              <div class="vg-scenes" id="vgScenes"></div>
+            </div>
+          </div>
+          <div class="panel stage-panel">
+            <div class="stage-title">
+              <h2>실제로 이렇게 보여요</h2>
+              <div class="spec" id="vgSpec"></div>
+            </div>
+            <div class="stage" id="vgStage"></div>
+            <div class="vg-bar">
+              <div class="progress vg-progress" id="vgProgress"><i></i><span></span></div>
+              <button class="btn primary" id="vgDownload" disabled>받기</button>
+              <button class="btn" id="vgSend" disabled>꾸미러 보내기</button>
+            </div>
           </div>
         </div>
       </div>
@@ -308,5 +406,6 @@
   <script src="stickers.js"></script>
   <script src="zip.js"></script>
   <script src="app.js"></script>
+  <script src="video-gif.js"></script>
 </body>
 </html>

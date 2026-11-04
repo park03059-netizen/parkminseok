@@ -14,7 +14,7 @@ const state = {
   platformId: 'kakao',
   image: null,
   transforms: {},
-  gif: { frames: [], delay: 0.5, fit: 'cover', platformId: 'insta-feed', width: 480, maxMB: 5, busy: false, last: null, overlays: [] },
+  gif: { tab: 'photo', clip: null, frames: [], delay: 0.5, fit: 'cover', platformId: 'insta-feed', width: 480, maxMB: 5, busy: false, last: null, overlays: [] },
   results: [],
 };
 
@@ -573,32 +573,105 @@ function onResInput(which) {
 let gifStage = null;
 const gifAnim = { timer: null, i: 0 };
 
+/* clip: 동영상으로 탭에서 보낸 GIF 한 개 { url, w, h, scenes: Blob[], delays: 초[], duration, name } */
+const hasGifSource = () => !!state.gif.clip || state.gif.frames.length > 0;
+const gifTotal = () => (state.gif.clip ? state.gif.clip.duration : state.gif.frames.length * state.gif.delay);
+
+function clearClip() {
+  const g = state.gif;
+  if (!g.clip) return;
+  URL.revokeObjectURL(g.clip.url);
+  g.clip = null;
+  g.last = null;
+}
+
+// 브라우저가 GIF를 원래 속도로 움직이게 두고, 그 위에 문구·이모티콘 층만 얹는다
+function mountClipStage(host, p, clip) {
+  host._ro?.disconnect();
+  host.innerHTML = '';
+  const img = document.createElement('img');
+  img.src = clip.url;
+  img.alt = '동영상에서 만든 GIF';
+  img.draggable = false;
+  const mock = buildMock(p, img);
+  host.appendChild(mock);
+  return { canvas: img, media: mock.querySelector('.mk-media'), paint() {} };
+}
+
+async function encodeClip(clip, overlays, maxBytes, setProg) {
+  const period = bobPeriod();
+  const starts = [];
+  let t = 0;
+  for (const d of clip.delays) { starts.push(t); t += d; }
+  let scale = 1, bytes, w, h;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    w = Math.max(16, Math.round(clip.w * scale));
+    h = Math.max(16, Math.round(clip.h * scale));
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    const label = attempt ? `용량을 줄여 다시 만드는 중 (${w}×${h})` : `GIF 만드는 중 (${w}×${h})`;
+    bytes = await GifEncoder.encode({
+      width: w, height: h, count: clip.scenes.length, delays: clip.delays,
+      getFrame: async (i) => {
+        const bmp = await createImageBitmap(clip.scenes[i]);
+        ctx.drawImage(bmp, 0, 0, w, h);
+        bmp.close();
+        drawOverlays(ctx, w, h, starts[i], overlays, period);
+        return ctx.getImageData(0, 0, w, h);
+      },
+      onProgress: (k, n) => setProg(k / n, `${label} · ${k}/${n}장`),
+    });
+    if (bytes.length <= maxBytes) break;
+    scale *= Math.sqrt(maxBytes / bytes.length) * 0.95;
+  }
+  return { bytes, w, h };
+}
+
 function renderGif() {
   const g = state.gif;
+  document.querySelectorAll('#gifTabs button').forEach((b) => {
+    b.classList.toggle('on', b.dataset.tab === g.tab);
+    b.setAttribute('aria-selected', b.dataset.tab === g.tab);
+  });
+  $('#gifPhotoPane').hidden = g.tab !== 'photo';
+  $('#gifVideoPane').hidden = g.tab !== 'video';
+  if (g.tab === 'video') {
+    $('#emojiDialog').close();
+    renderVideo();
+  }
   const sel = $('#gifPlatform');
   sel.innerHTML = '';
   PLATFORMS.forEach((p) => sel.add(new Option(`${p.name} (${ratio(p.w, p.h)})`, p.id)));
   if (!getP(g.platformId)) g.platformId = 'insta-feed';
   sel.value = g.platformId;
+  const clip = g.clip;
+  // 동영상에서 받은 GIF는 모양·속도·크기가 이미 정해져 있다
+  sel.disabled = $('#gifDelay').disabled = $('#gifWidth').disabled = !!clip;
   $('#gifDelay').value = g.delay;
-  $('#gifDelayVal').textContent = `${g.delay}초`;
+  $('#gifDelayVal').textContent = clip ? '원래 속도' : `${g.delay}초`;
   $('#gifWidth').value = g.width;
   $('#gifMax').value = g.maxMB;
-  document.querySelectorAll('#gifFit button').forEach((b) => b.classList.toggle('on', b.dataset.fit === g.fit));
-  $('#gifCount').textContent = g.frames.length ? `${g.frames.length}장` : '';
+  document.querySelectorAll('#gifFit button').forEach((b) => {
+    b.classList.toggle('on', b.dataset.fit === g.fit);
+    b.disabled = !!clip;
+  });
+  $('#gifCount').textContent = clip ? '동영상 GIF' : g.frames.length ? `${g.frames.length}장` : '';
 
   renderFrameStrip();
 
   const p = getP(g.platformId);
-  gifStage = mountStage($('#gifStage'), p, {
-    getImg: () => (g.frames.length ? g.frames[gifAnim.i % g.frames.length].img : null),
-    fit: () => g.fit,
-    emptyText: '사진을 여러 장 올려 주세요',
-  });
-  const [w, h] = gifSize();
-  $('#gifSpec').innerHTML = specHTML([['크기', `약 ${w}×${h}`], ['용량', `${g.maxMB}MB 이하`], ['길이', `${(g.frames.length * g.delay).toFixed(1)}초`]]);
-  $('#gifMake').disabled = g.busy || g.frames.length < 2;
-  $('#gifTextBtn').disabled = $('#gifEmojiBtn').disabled = !g.frames.length;
+  gifStage = clip
+    ? mountClipStage($('#gifStage'), p, clip)
+    : mountStage($('#gifStage'), p, {
+      getImg: () => (g.frames.length ? g.frames[gifAnim.i % g.frames.length].img : null),
+      fit: () => g.fit,
+      emptyText: '사진을 여러 장 올려 주세요',
+    });
+  const [w, h] = clip ? [clip.w, clip.h] : gifSize();
+  $('#gifSpec').innerHTML = specHTML([['크기', `${clip ? '' : '약 '}${w}×${h}`], ['용량', `${g.maxMB}MB 이하`], ['길이', `${gifTotal().toFixed(1)}초`]]);
+  $('#gifMake').disabled = g.busy || !(clip || g.frames.length >= 2);
+  $('#gifTextBtn').disabled = $('#gifEmojiBtn').disabled = !hasGifSource();
   renderOverlays();
   renderGifDone();
   startGifAnim();
@@ -676,7 +749,7 @@ const outlineColor = (c) => (c === '#0f172a' ? '#ffffff' : '#0f172a');
 
 // 통통 튀는 주기: GIF 전체 길이에 딱 맞게 나눠 반복이 끊기지 않게 한다
 function bobPeriod() {
-  const total = state.gif.frames.length * state.gif.delay;
+  const total = gifTotal();
   return total > 0 ? total / Math.max(1, Math.round(total / 0.6)) : 0.6;
 }
 
@@ -741,7 +814,7 @@ function renderOverlays() {
     media.appendChild(layer);
   }
   layer.innerHTML = '';
-  layer.hidden = !state.gif.frames.length;
+  layer.hidden = !hasGifSource();
   const period = bobPeriod();
   for (const o of state.gif.overlays) {
     if (o.type === 'text' && !o.content) continue;
@@ -823,7 +896,7 @@ function removeOverlay(o) {
 }
 
 function addEmoji(emoji, x, y) {
-  if (!state.gif.frames.length) return toast('먼저 사진을 올려 주세요');
+  if (!hasGifSource()) return toast('먼저 사진을 올려 주세요');
   const count = state.gif.overlays.filter((o) => o.type !== 'text').length;
   state.gif.overlays.push({ id: ++seq, type: 'emoji', content: emoji, x: clamp(x, 0, 1), y: clamp(y, 0, 1), size: 0.2, phase: (count * 0.37) % 1 });
   renderOverlays();
@@ -832,7 +905,7 @@ function addEmoji(emoji, x, y) {
 async function addSticker(id, x, y) {
   const s = stickerById(id);
   if (!s) return;
-  if (!state.gif.frames.length) return toast('먼저 사진을 올려 주세요');
+  if (!hasGifSource()) return toast('먼저 사진을 올려 주세요');
   try {
     await loadSticker(s);
   } catch {
@@ -943,6 +1016,18 @@ function renderFrameStrip() {
   const strip = $('#frameStrip');
   const frames = state.gif.frames;
   strip.innerHTML = '';
+  const clip = state.gif.clip;
+  if (clip) {
+    strip.innerHTML = `
+      <div class="frame">
+        <img src="${clip.url}" alt="" draggable="false">
+        <span class="frame-no">GIF</span>
+        <div class="frame-tools"><span></span><button title="빼기" data-act="x">${I.trash}</button><span></span></div>
+      </div>
+      <p class="clip-note"><b>${esc(clip.name)}</b>에서 만든 GIF · ${clip.duration.toFixed(1)}초 · 장면 ${clip.delays.length}장<br>원래 속도 그대로 움직여요. 위에 문구와 이모티콘을 얹어 보세요.</p>`;
+    strip.querySelector('[data-act="x"]').onclick = () => { clearClip(); renderGif(); };
+    return;
+  }
   if (!frames.length) {
     strip.innerHTML = '<p class="strip-empty">아직 올린 사진이 없어요</p>';
     return;
@@ -1002,6 +1087,7 @@ function moveFrame(from, to) {
 
 async function addGifFiles(files) {
   const imgs = files.filter((f) => f.type.startsWith('image/'));
+  if (imgs.length) clearClip();
   for (const file of imgs) {
     try {
       const l = await loadImage(file);
@@ -1031,7 +1117,7 @@ function stopGifAnim() { clearTimeout(gifAnim.timer); }
 
 async function makeGif() {
   const g = state.gif;
-  if (g.frames.length < 2) return toast('사진을 2장 이상 올려 주세요');
+  if (!g.clip && g.frames.length < 2) return toast('사진을 2장 이상 올려 주세요');
   g.busy = true;
   $('#gifMake').disabled = true;
   $('#gifDone').hidden = true;
@@ -1050,6 +1136,15 @@ async function makeGif() {
       .filter((o) => (o.type === 'text' ? o.content : o.type !== 'sticker' || stickerById(o.content)?.data))
       .map((o) => ({ ...o }));
     const stickers = overlays.filter((o) => o.type === 'sticker');
+    if (g.clip) {
+      const { bytes, w, h } = await encodeClip(g.clip, overlays, maxBytes, setProg);
+      const blob = new Blob([bytes], { type: 'image/gif' });
+      const kinds = [overlays.some((o) => o.type === 'text') && '문구', overlays.some((o) => o.type !== 'text') && '이모티콘'].filter(Boolean);
+      const extra = kinds.length ? ` · ${kinds.join('·')} 포함` : '';
+      g.last = addResult({ p: getP(g.platformId), blob, w, h, type: 'gif', note: `동영상 GIF · ${g.clip.duration.toFixed(1)}초${extra}`, limit: maxBytes });
+      toast(`GIF 완성! ${w}×${h} · ${fmtBytes(blob.size)}`);
+      return;
+    }
     // 이모티콘이 튀거나 GIF 이모티콘이 움직이는 모습을 담으려면 한 장을 여러 장면으로 나눈다
     const moving = overlays.some((o) => o.type !== 'text');
     const step = stickers.some((o) => stickerById(o.content).data.animated) ? STICKER_STEP : BOB_STEP;
@@ -1099,7 +1194,7 @@ async function makeGif() {
   } finally {
     g.busy = false;
     prog.hidden = true;
-    $('#gifMake').disabled = g.frames.length < 2;
+    $('#gifMake').disabled = !(g.clip || g.frames.length >= 2);
     renderGifDone();
   }
 }
@@ -1406,6 +1501,7 @@ function init() {
   document.querySelectorAll('#gifFit button').forEach((b) => (b.onclick = () => { state.gif.fit = b.dataset.fit; renderGif(); }));
   $('#gifMake').onclick = makeGif;
   initOverlayTools();
+  initVideoGif();
 
   $('#downloadAll').onclick = downloadAll;
 
@@ -1427,4 +1523,5 @@ function init() {
   show(location.hash.slice(1) || 'home');
 }
 
-init();
+// 동영상으로 탭(video-gif.js)까지 다 읽은 뒤 시작한다
+document.addEventListener('DOMContentLoaded', init);
