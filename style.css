@@ -837,3 +837,67 @@ select:focus { outline: 2px solid var(--sky); outline-offset: 1px; }
   }
   .bottom-nav .badge { right: 6px; }
 }
+
+#gifTabs { max-width: 100%; }
+#gifTabs button { min-width: 0; }
+@media (max-width: 480px) {
+  #gifTabs { display: flex; }
+  #gifTabs button { flex: 1; padding-inline: 4px; }
+}
+#geTools { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+#geTools button { overflow-wrap: anywhere; }
+#geFields, #geSettings { display: grid; gap: 10px; }
+#geFields output { color: var(--sky-deep); font-weight: 700; }
+#geFields #geLock { justify-self: start; }
+#geSettings { margin-top: 16px; }
+#geOriginal summary { cursor: pointer; font-weight: 700; }
+#geReplace { float: right; }
+#geOriginal summary::after { content: ""; display: block; clear: both; }
+#geHistory:empty { display: none; }
+.ge-format { text-align: center; color: var(--sky-deep); font-size: 20px; }
+.ge-preview { display: block; max-width: 100%; max-height: 380px; margin: 16px auto; object-fit: contain; }
+#geDownload { margin-top: 12px; }
+
+#geHistory { display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+#geCards { display:grid; gap:16px; }
+.ge-future { opacity:.55; }
+.ge-choice { position:relative; cursor:pointer; }
+.ge-choice input { position:absolute; opacity:0; }
+.ge-choice span { display:block; padding:8px 12px; border:1px solid var(--line); border-radius:10px; }
+.ge-choice input:checked + span { background:var(--sky-strong); color:white; }
+.ge-choice input:focus-visible + span { outline:2px solid var(--sky-deep); }
+.ge-pair { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:14px; }
+.ge-pair canvas { display:block; width:100%; height:150px; object-fit:contain; background:var(--sky-softer); }
+.ge-receipt { padding:12px; border-block:1px dashed var(--line); font-variant-numeric:tabular-nums; }
+#geStrip { position:relative; height:66px; margin:12px; }
+#geThumbs { height:100%; display:flex; overflow:hidden; }
+#geThumbs canvas { min-width:0; flex:1; }
+#geSelection { position:absolute; inset-block:0; border:3px solid var(--sky-strong); pointer-events:none; }
+#geStrip input { position:absolute; inset:0; width:100%; height:100%; margin:0; pointer-events:none; appearance:none; background:transparent; }
+#geStrip input::-webkit-slider-thumb { appearance:none; pointer-events:auto; cursor:ew-resize; width:14px; height:50px; background:var(--sky-deep); border-radius:5px; }
+#geStrip input::-moz-range-thumb { pointer-events:auto; cursor:ew-resize; width:14px; height:50px; background:var(--sky-deep); }
+#geStrip #geStart { top:-6px; }
+#geStrip #geEnd { top:6px; }
+
+.ge-draft { border:2px dashed var(--sky-strong); }
+.ge-draft .ge-view { width:100%; aspect-ratio:1; position:relative; display:grid; place-items:center; overflow:hidden; background:var(--sky-softer); }
+.ge-draft .ge-view canvas { background:transparent; }
+.ge-draft .ge-view i { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); border:2px dashed var(--sky-deep); box-shadow:inset 0 0 0 1px white; }
+.ge-draft .ge-receipt strong { display:block; font-size:1.1rem; color:var(--sky-deep); }
+
+.ge-resizing .ge-view canvas,
+.ge-resizing .ge-view i { transition:width 80ms linear,height 80ms linear; }
+.ge-resizing .ge-view canvas { object-fit:fill; }
+.ge-size-label { position:absolute; left:50%; transform:translateX(-50%); max-width:100%; padding:1px 4px; border-radius:4px; color:var(--sky-deep); background:white; font-size:clamp(10px,2.8vw,13px); font-weight:700; text-align:center; transition:top 80ms linear; pointer-events:none; }
+
+#geTools { grid-template-columns:repeat(5,minmax(0,1fr)); }
+@media (max-width:1100px) { #geTools { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+#geReversePreview, #geCoverImage { display:block; justify-self:center; max-width:100%; object-fit:contain; }
+#geReversePreview { width:140px; height:100px; }
+#geCoverImage { width:100%; height:200px; background:var(--sky-softer); }
+#geCoverStrip { display:flex; gap:6px; min-width:0; overflow-x:auto; padding:4px; }
+#geCoverStrip label { position:relative; flex:none; cursor:pointer; }
+#geCoverStrip input { position:absolute; opacity:0; }
+#geCoverStrip canvas { display:block; width:64px; height:52px; object-fit:contain; border:2px solid var(--line); border-radius:6px; }
+#geCoverStrip input:checked + canvas { border-color:var(--sky-deep); background:var(--sky-soft); }
+#geCoverStrip input:focus-visible + canvas { outline:2px solid var(--sky-deep); }

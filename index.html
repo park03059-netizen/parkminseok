@@ -4,6 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>올릴 곳 맞춤 사진 편집</title>
+  <meta name="theme-color" content="#f5faff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="맞춤사진">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon-16.png">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -126,6 +134,7 @@
       <div class="seg gif-tabs" id="gifTabs" role="tablist">
         <button role="tab" data-tab="photo">사진으로</button>
         <button role="tab" data-tab="video">동영상으로</button>
+        <button role="tab" data-tab="editor">GIF 편집</button>
       </div>
       <div id="gifPhotoPane">
       <div class="screen-head">
@@ -210,6 +219,19 @@
       </div>
       </div>
 
+      <div id="gifEditorPane" hidden>
+        <div id="geUpload">
+          <header class="vg-hero"><h1 class="vg-title">쓰기 쉬운 GIF 편집기</h1><p class="vg-sub">GIF 파일을 간편히 편집하기</p></header>
+          <div class="panel vg-upload"><div class="dropzone vg-drop" id="geDrop"><span class="dz-icon"></span><strong>GIF 파일을 여기에 끌어다 놓으세요</strong><input id="geFile" hidden type="file" accept=".gif,image/gif"><button class="btn primary" id="gePick">파일 고르기</button></div>
+          <p class="vg-error" role="alert" id="geError" hidden>편집할 수 없는 파일이에요</p><strong class="ge-format">편집할 수 있는 형식 · GIF</strong></div>
+        </div>
+        <div id="geWork" class="layout-split" hidden>
+          <div class="col-left"><nav id="geHistory" aria-label="편집 기록"></nav><details class="panel" id="geOriginal" open><summary>Original GIF <button type="button" class="btn small" id="geReplace">다른 GIF 올리기</button></summary><img class="ge-preview" id="geSource" alt="원본 GIF"><dl class="vg-info" id="geInfo"></dl></details>
+          <div id="geCards"></div></div>
+          <section class="panel"><h2 id="geTitle">Editor Tools</h2><div id="geTools"></div><form id="geForm" hidden><div id="geFields"></div><div class="actions"><button type="button" class="btn" id="geBack">Back</button><button class="btn primary">Go!</button></div></form>
+          <p role="status" id="geStatus"></p><button class="btn block" id="geSave">저장</button><form id="geSettings" hidden><label class="field">파일 이름<input id="geName" required></label><p>저장 폴더 · 원본 파일과 같은 폴더</p><button class="btn primary">파일 저장</button></form></section>
+        </div>
+      </div>
       <div id="gifVideoPane" hidden>
         <div class="vg-hero">
           <h1 class="vg-title">Video를 GIF로 변환</h1>
@@ -407,5 +429,6 @@
   <script src="zip.js"></script>
   <script src="app.js"></script>
   <script src="video-gif.js"></script>
+  <script src="gif-editor.js"></script>
 </body>
 </html>

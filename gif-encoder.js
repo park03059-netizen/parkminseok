@@ -18,7 +18,7 @@
   }
 
   // 색 줄이기: RGB 각 5비트 히스토그램을 median-cut으로 256개 상자로 나눈다
-  function quantize(data) {
+  function quantize(data, transparent = false) {
     const hist = new Uint32Array(32768);
     for (let i = 0; i < data.length; i += 4) {
       hist[((data[i] >> 3) << 10) | ((data[i + 1] >> 3) << 5) | (data[i + 2] >> 3)]++;
@@ -42,7 +42,7 @@
     };
 
     const boxes = [makeBox(all)];
-    while (boxes.length < 256) {
+    while (boxes.length < (transparent ? 255 : 256)) {
       let bi = -1, best = -1;
       for (let i = 0; i < boxes.length; i++) {
         const b = boxes[i];
@@ -88,6 +88,7 @@
     const indices = new Uint8Array(data.length / 4);
     for (let i = 0, p = 0; i < data.length; i += 4, p++) {
       indices[p] = lut[((data[i] >> 3) << 10) | ((data[i + 1] >> 3) << 5) | (data[i + 2] >> 3)];
+      if (transparent && data[i + 3] < 128) indices[p] = 255;
     }
     return { palette, indices };
   }
@@ -140,6 +141,25 @@
 
   const wait = () => new Promise((r) => setTimeout(r, 0));
 
+  function editorPalette(data) {
+    const colors = new Map(), palette = new Uint8Array(768);
+    const indices = new Uint8Array(data.length / 4);
+    for (let i = 0; i < indices.length; i++) {
+      const p = i * 4;
+      if (data[p + 3] < 128) continue;
+      const key = data[p] * 65536 + data[p + 1] * 256 + data[p + 2];
+      if (!colors.has(key)) {
+        if (colors.size === 255) return { ...quantize(data, true), bits: 8, clear: 255 };
+        const index = colors.size + 1;
+        colors.set(key, index);
+        palette.set(data.subarray(p, p + 3), index * 3);
+      }
+      indices[i] = colors.get(key);
+    }
+    const bits = Math.max(1, Math.ceil(Math.log2(colors.size + 1)));
+    return { palette: palette.subarray(0, 3 << bits), indices, bits, clear: 0 };
+  }
+
   // 앞 장면과 달라진 부분의 사각형
   function diffRect(a, b, w, h) {
     let minX = w, minY = h, maxX = -1, maxY = -1;
@@ -173,35 +193,38 @@
    * delays: 장면마다 보여 줄 초
    * @returns {Promise<Uint8Array>}
    */
-  async function encode({ width, height, count, getFrame, delays, onProgress }) {
+  async function encode({ width, height, count, getFrame, delays, onProgress, transparent = false, loops = 0 }) {
     const out = new ByteWriter();
     out.str('GIF89a');
     out.u16(width); out.u16(height);
     out.byte(0); out.byte(0); out.byte(0);
 
     // 무한 반복
-    out.byte(0x21); out.byte(0xff); out.byte(11); out.str('NETSCAPE2.0');
-    out.byte(3); out.byte(1); out.u16(0); out.byte(0);
+    if (loops !== null) {
+      out.byte(0x21); out.byte(0xff); out.byte(11); out.str('NETSCAPE2.0');
+      out.byte(3); out.byte(1); out.u16(loops); out.byte(0);
+    }
 
     let prev = null;
     for (let f = 0; f < count; f++) {
       const data = (await getFrame(f)).data;
       const cur = new Uint32Array(data.buffer, data.byteOffset, width * height);
       const r = prev ? diffRect(prev, cur, width, height) : { x: 0, y: 0, w: width, h: height };
-      prev = cur;
-      const { palette, indices } = quantize(crop(data, width, r));
-      const cs = Math.max(2, Math.round(delays[f] * 100));
+      prev = transparent ? null : cur;
+      const pixels = crop(data, width, r);
+      const { palette, indices, bits = 8, clear = 0 } = transparent ? editorPalette(pixels) : quantize(pixels);
+      const cs = Math.min(65535, Math.max(transparent ? 0 : 2, Math.round(delays[f] * 100)));
 
       // 장면을 지우지 않고 바뀐 부분만 덮는다 (disposal 1)
       out.byte(0x21); out.byte(0xf9); out.byte(4);
-      out.byte(0x04); out.u16(cs); out.byte(0); out.byte(0);
+      out.byte(transparent ? 0x09 : 0x04); out.u16(cs); out.byte(clear); out.byte(0);
 
       out.byte(0x2c);
       out.u16(r.x); out.u16(r.y); out.u16(r.w); out.u16(r.h);
-      out.byte(0x87);
+      out.byte(0x80 | (bits - 1));
       out.bytes(palette);
 
-      lzw(indices, 8, out);
+      lzw(indices, Math.max(2, bits), out);
       if (onProgress) onProgress(f + 1, count);
       await wait();
     }

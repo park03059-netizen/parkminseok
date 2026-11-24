@@ -636,6 +636,12 @@ function renderGif() {
   });
   $('#gifPhotoPane').hidden = g.tab !== 'photo';
   $('#gifVideoPane').hidden = g.tab !== 'video';
+  $('#gifEditorPane').hidden = g.tab !== 'editor';
+  if (g.tab === 'editor') {
+    $('#emojiDialog').close();
+    stopGifAnim();
+    return;
+  }
   if (g.tab === 'video') {
     $('#emojiDialog').close();
     renderVideo();
